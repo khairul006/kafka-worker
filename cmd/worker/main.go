@@ -67,9 +67,16 @@ func main() {
 		GroupID: kafkaGroupID,
 	})
 
-	kafkaConsumer := consumer.NewKafkaConsumer(kafkaReader, txProcessor)
+	workerCount := 5
+	if wc := os.Getenv("WORKER_COUNT"); wc != "" {
+		if parsed, err := strconv.Atoi(wc); err == nil {
+			workerCount = parsed
+		}
+	}
 
-	log.Println("Kafka worker started successfully")
+	kafkaConsumer := consumer.NewKafkaConsumer(kafkaReader, txProcessor, workerCount)
+
+	log.Printf("Kafka worker started successfully (workers=%d)", workerCount)
 
 	kafkaConsumer.Start()
 }
