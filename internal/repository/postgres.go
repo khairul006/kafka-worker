@@ -19,14 +19,18 @@ func NewPostgresRepo(connString string) (*PostgresRepo, error) {
 	return &PostgresRepo{pool: pool}, nil
 }
 
-func (r *PostgresRepo) UpsertTransaction(id string, amount float64) error {
+func (r *PostgresRepo) UpsertTransaction(id string, exitPlaza string, entryPlaza string, moneyValue float64) error {
 	// simple upsert example
 	query := `
-	INSERT INTO transaction (id, money_value)
-	VALUES ($1, $2)
-	ON CONFLICT (id) DO UPDATE SET money_value = EXCLUDED.money_value
+	INSERT INTO transaction_test (id, exit_plaza, entry_plaza, money_value)
+	VALUES ($1, $2, $3, $4)
+	ON CONFLICT (id) 
+	DO UPDATE SET 
+		exit_plaza = EXCLUDED.exit_plaza,
+		entry_plaza = EXCLUDED.entry_plaza,
+		money_value = EXCLUDED.money_value
 	`
-	_, err := r.pool.Exec(context.Background(), query, id, amount)
+	_, err := r.pool.Exec(context.Background(), query, id, exitPlaza, entryPlaza, moneyValue)
 	if err != nil {
 		return fmt.Errorf("failed upsert: %w", err)
 	}

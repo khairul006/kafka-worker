@@ -3,46 +3,57 @@ package consumer
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"kafka-worker/internal/model"
 	"kafka-worker/internal/processor"
-	"time"
+	"log"
 
 	"github.com/segmentio/kafka-go"
 )
 
-func StartConsumer(brokers []string, topic, groupID string, txProcessor *processor.TransactionProcessor) {
+type KafkaConsumer struct {
+	reader    *kafka.Reader
+	processor *processor.TransactionProcessor
+}
 
-	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:  brokers,
-		Topic:    topic,
-		GroupID:  groupID,
-		MinBytes: 10e3, // 10KB
-		MaxBytes: 10e6, // 10MB
-	})
+func NewKafkaConsumer(reader *kafka.Reader, p *processor.TransactionProcessor) *KafkaConsumer {
+	return &KafkaConsumer{
+		reader:    reader,
+		processor: p,
+	}
+}
 
-	ctx := context.Background()
-	fmt.Println("Kafka consumer started...")
+func (c *KafkaConsumer) Start() {
 
 	for {
-		msg, err := reader.ReadMessage(ctx)
+		msg, err := c.reader.ReadMessage(context.Background())
 		if err != nil {
-			fmt.Println("Error reading message:", err)
-			time.Sleep(time.Second) // backoff on error
+			log.Println("kafka read error:", err)
 			continue
 		}
 
-		// Parse message
-		var tx processor.Transaction
-		err = json.Unmarshal(msg.Value, &tx)
+		log.Printf(
+			"Consumed message topic=%s partition=%d offset=%d",
+			msg.Topic,
+			msg.Partition,
+			msg.Offset,
+		)
+
+		log.Printf(
+			"Consumed message=%s",
+			msg.Value,
+		)
+
+		var event model.DebeziumEvent
+
+		err = json.Unmarshal(msg.Value, &event)
 		if err != nil {
-			fmt.Println("Failed to unmarshal message:", err)
+			log.Println("json parse error:", err)
 			continue
 		}
 
-		// Process transaction
-		if err := txProcessor.Process(tx); err != nil {
-			fmt.Println("Failed to process transaction:", err)
-			continue
+		err = c.processor.Process(event)
+		if err != nil {
+			log.Println("process error:", err)
 		}
 	}
 }
