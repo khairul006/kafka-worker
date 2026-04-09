@@ -1,0 +1,13 @@
+{"level":"info","ts":"2026-04-09T15:18:10.851+0800","caller":"worker/main.go:24","msg":"Application starting..."}
+{"level":"info","ts":"2026-04-09T15:18:10.933+0800","caller":"worker/main.go:86","msg":"Kafka worker started successfully (workers=%d)","workers":5}
+{"level":"info","ts":"2026-04-09T15:18:10.934+0800","caller":"consumer/kafka.go:51","msg":"Started batch workers","workers":5}
+{"level":"info","ts":"2026-04-09T15:20:08.069+0800","caller":"consumer/kafka.go:156","msg":"Slow Message","worker":5,"wait":7.1343321,"json":0}
+{"level":"info","ts":"2026-04-09T15:20:08.069+0800","caller":"consumer/kafka.go:156","msg":"Slow Message","worker":4,"wait":7.1343321,"json":0}
+{"level":"info","ts":"2026-04-09T15:20:08.069+0800","caller":"consumer/kafka.go:156","msg":"Slow Message","worker":3,"wait":7.133526,"json":0.0008061}
+{"level":"info","ts":"2026-04-09T15:20:08.069+0800","caller":"consumer/kafka.go:156","msg":"Slow Message","worker":1,"wait":7.1343321,"json":0}
+{"level":"info","ts":"2026-04-09T15:20:08.069+0800","caller":"consumer/kafka.go:156","msg":"Slow Message","worker":2,"wait":7.1343321,"json":0}
+{"level":"info","ts":"2026-04-09T15:20:11.047+0800","caller":"consumer/kafka.go:126","msg":"FLUSH COMPLETE","worker":4,"count":1,"db":0.1087571,"commit":0.0036712,"total":0.1124283}
+{"level":"info","ts":"2026-04-09T15:20:11.054+0800","caller":"consumer/kafka.go:126","msg":"FLUSH COMPLETE","worker":1,"count":1,"db":0.1087571,"commit":0.0103201,"total":0.1190772}
+{"level":"info","ts":"2026-04-09T15:20:11.055+0800","caller":"consumer/kafka.go:126","msg":"FLUSH COMPLETE","worker":3,"count":1,"db":0.1129612,"commit":0.0077491,"total":0.1207103}
+{"level":"info","ts":"2026-04-09T15:20:11.057+0800","caller":"consumer/kafka.go:126","msg":"FLUSH COMPLETE","worker":2,"count":1,"db":0.1129612,"commit":0.0094451,"total":0.1224063}
+{"level":"info","ts":"2026-04-09T15:20:11.059+0800","caller":"consumer/kafka.go:126","msg":"FLUSH COMPLETE","worker":5,"count":6,"db":0.1129612,"commit":0.011069,"total":0.1240302}

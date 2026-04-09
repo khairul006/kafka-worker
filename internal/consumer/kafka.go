@@ -3,9 +3,9 @@ package consumer
 import (
 	"context"
 	"encoding/json"
+	"kafka-worker/internal/logger"
 	"kafka-worker/internal/model"
 	"kafka-worker/internal/processor"
-	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/segmentio/kafka-go"
+	"go.uber.org/zap"
 )
 
 type KafkaConsumer struct {
@@ -47,7 +48,7 @@ func (c *KafkaConsumer) Start() {
 		wg.Add(1)
 		go c.worker(ctx, &wg, i)
 	}
-	log.Printf("Started %d batch workers", c.workerCount)
+	logger.Log.Info("Started batch workers", zap.Int("workers", c.workerCount))
 
 	// 2. Main Reader Loop
 	go func() {
@@ -59,7 +60,7 @@ func (c *KafkaConsumer) Start() {
 				if ctx.Err() != nil {
 					return // Context cancelled
 				}
-				log.Printf("Kafka fetch error: %v", err)
+				logger.Log.Error("Kafka fetch error", zap.Error(err))
 				continue
 			}
 
@@ -73,13 +74,13 @@ func (c *KafkaConsumer) Start() {
 
 	// 3. Block until OS signal
 	<-sigChan
-	log.Println("Shutdown signal received. Cleaning up...")
+	logger.Log.Info("Shutdown signal received. Cleaning up...")
 	cancel() // This triggers the ctx.Done() in all workers
 
 	wg.Wait()
-	log.Println("All workers finished. Closing Kafka reader...")
+	logger.Log.Info("All workers finished. Closing Kafka reader...")
 	if err := c.reader.Close(); err != nil {
-		log.Printf("Error closing reader: %v", err)
+		logger.Log.Error("Error closing reader", zap.Error(err))
 	}
 }
 
@@ -111,19 +112,18 @@ func (c *KafkaConsumer) worker(ctx context.Context, wg *sync.WaitGroup, id int) 
 		dbDuration := time.Since(startDB)
 
 		if err != nil {
-			log.Printf("[Worker %d] FATAL DB ERROR: %v", id, err)
+			logger.Log.Error("FATAL DB ERROR", zap.Int("worker", id), zap.Error(err))
 			return
 		}
 
 		// 2. Kafka Commit Timing
 		startCommit := time.Now()
 		if err := c.reader.CommitMessages(ctx, messages...); err != nil {
-			log.Printf("[Worker %d] Kafka commit error: %v", id, err)
+			logger.Log.Error("Kafka commit error", zap.Int("worker", id), zap.Error(err))
 		}
 		commitDuration := time.Since(startCommit)
 
-		log.Printf("[Worker %d] FLUSH COMPLETE: count=%d | db=%v | commit=%v | total=%v",
-			id, len(batch), dbDuration, commitDuration, time.Since(startFlush))
+		logger.Log.Info("FLUSH COMPLETE", zap.Int("worker", id), zap.Int("count", len(batch)), zap.Duration("db", dbDuration), zap.Duration("commit", commitDuration), zap.Duration("total", time.Since(startFlush)))
 
 		// Clear buffers
 		batch = batch[:0]
@@ -146,14 +146,14 @@ func (c *KafkaConsumer) worker(ctx context.Context, wg *sync.WaitGroup, id int) 
 			jsonDuration := time.Since(startJson)
 
 			if err != nil {
-				log.Printf("[Worker %d] JSON error: %v", id, err)
+				logger.Log.Error("JSON error", zap.Int("worker", id), zap.Error(err))
 				_ = c.reader.CommitMessages(ctx, msg)
 				continue
 			}
 
 			// Only log individual message timing if it's unusually slow (> 10ms)
 			if jsonDuration > 10*time.Millisecond || waitDuration > 100*time.Millisecond {
-				log.Printf("[Worker %d] Slow Message: wait=%v | json=%v", id, waitDuration, jsonDuration)
+				logger.Log.Info("Slow Message", zap.Int("worker", id), zap.Duration("wait", waitDuration), zap.Duration("json", jsonDuration))
 			}
 
 			batch = append(batch, event)

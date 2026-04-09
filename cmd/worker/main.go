@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"kafka-worker/internal/consumer"
+	"kafka-worker/internal/logger"
 	"kafka-worker/internal/processor"
 	"kafka-worker/internal/repository"
 	"log"
@@ -12,9 +13,15 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/segmentio/kafka-go"
+	"go.uber.org/zap"
 )
 
 func main() {
+
+	logger.InitLogger()
+	defer logger.Log.Sync() // Flushes buffer to file before exit
+
+	logger.Log.Info("Application starting...")
 
 	// Load .env
 	if err := godotenv.Load(); err != nil {
@@ -48,12 +55,10 @@ func main() {
 		pgDB,
 	)
 
-	log.Println("Starting Kafka worker...")
-
 	// Repository
 	repo, err := repository.NewPostgresRepo(connStr)
 	if err != nil {
-		log.Fatal("Failed to connect to Postgres:", err)
+		logger.Log.Fatal("Failed to connect to Postgres:", zap.Error(err))
 	}
 	defer repo.Close()
 
@@ -76,7 +81,7 @@ func main() {
 
 	kafkaConsumer := consumer.NewKafkaConsumer(kafkaReader, txProcessor, workerCount)
 
-	log.Printf("Kafka worker started successfully (workers=%d)", workerCount)
+	logger.Log.Info("Kafka worker started successfully (workers=%d)", zap.Int("workers", workerCount))
 
 	kafkaConsumer.Start()
 }
