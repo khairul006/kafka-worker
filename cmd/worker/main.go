@@ -13,7 +13,6 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/segmentio/kafka-go"
-	"go.uber.org/zap"
 )
 
 func main() {
@@ -21,7 +20,7 @@ func main() {
 	logger.InitLogger()
 	defer logger.Log.Sync() // Flushes buffer to file before exit
 
-	logger.Log.Info("Application starting...")
+	logger.Info("Application starting...")
 
 	// Load .env
 	if err := godotenv.Load(); err != nil {
@@ -58,7 +57,7 @@ func main() {
 	// Repository
 	repo, err := repository.NewPostgresRepo(connStr)
 	if err != nil {
-		logger.Log.Fatal("Failed to connect to Postgres:", zap.Error(err))
+		logger.Fatal("Failed to connect to Postgres:", err)
 	}
 	defer repo.Close()
 
@@ -81,7 +80,7 @@ func main() {
 
 	kafkaConsumer := consumer.NewKafkaConsumer(kafkaReader, txProcessor, workerCount)
 
-	logger.Log.Info("Kafka worker started successfully (workers=%d)", zap.Int("workers", workerCount))
+	logger.Info("Kafka worker started successfully", workerCount)
 
 	kafkaConsumer.Start()
 }

@@ -11,7 +11,6 @@ import (
 var Log *zap.Logger
 
 func InitLogger() {
-	// 1. Setup Lumberjack for Rotation
 	writerSync := zapcore.AddSync(&lumberjack.Logger{
 		Filename:   "./logs/kafka-worker.log",
 		MaxSize:    100,  // Megabytes before rotating
@@ -20,17 +19,78 @@ func InitLogger() {
 		Compress:   true, // Zip old log files
 	})
 
-	// 2. Setup Encoder (JSON is better for production/ELK)
-	encoderConfig := zap.NewProductionEncoderConfig()
-	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	encoder := zapcore.NewJSONEncoder(encoderConfig)
+	// 1. Define the actual config we will use
+	config := zapcore.EncoderConfig{
+		TimeKey:          "ts",
+		LevelKey:         "level",
+		MessageKey:       "msg",
+		LineEnding:       zapcore.DefaultLineEnding,
+		EncodeTime:       zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05.000"),
+		EncodeLevel:      zapcore.CapitalLevelEncoder,
+		ConsoleSeparator: " - ",
+	}
 
-	// 3. Create Core
-	// We combine File output and Standard Output (Console)
+	// 2. Create the encoder using that config
+	encoder := zapcore.NewConsoleEncoder(config)
+
+	// 3. Setup the Core
 	core := zapcore.NewTee(
 		zapcore.NewCore(encoder, writerSync, zap.InfoLevel),
-		zapcore.NewCore(zapcore.NewConsoleEncoder(encoderConfig), zapcore.AddSync(os.Stdout), zap.InfoLevel),
+		zapcore.NewCore(encoder, zapcore.AddSync(os.Stdout), zap.InfoLevel),
 	)
 
-	Log = zap.New(core, zap.AddCaller())
+	// Finalize the logger (No zap.AddCaller() to keep it short)
+	Log = zap.New(core)
+}
+
+func Info(message string, data ...interface{}) {
+	var additionalData interface{}
+	if len(data) > 0 {
+		additionalData = data[0]
+	}
+	Log.Info("Message: "+message+" - Additional Data:", zap.Any("data", additionalData))
+}
+
+func Debug(message string, data ...interface{}) {
+	var additionalData interface{}
+	if len(data) > 0 {
+		additionalData = data[0]
+	}
+	Log.Debug("Message: "+message+" - Additional Data:", zap.Any("data", additionalData))
+}
+
+func Warn(message string, data ...interface{}) {
+	var additionalData interface{}
+	if len(data) > 0 {
+		additionalData = data[0]
+	}
+	Log.Warn("Message: "+message+" - Additional Data:", zap.Any("data", additionalData))
+}
+
+// Error wrapper: Message + Data + Automatic Stack Trace
+func Error(message string, data ...interface{}) {
+	var d interface{}
+	if len(data) > 0 {
+		d = data[0]
+	}
+
+	// zap.AddStacktrace(zap.ErrorLevel) ensures a trace is attached
+	// only for Error level and above.
+	Log.Error("Message: "+message+" - Additional Data:",
+		zap.Any("data", d),
+		zap.Stack("trace"),
+	)
+}
+
+// Fatal wrapper: Message + Data + Trace + App Crash
+func Fatal(message string, data ...interface{}) {
+	var d interface{}
+	if len(data) > 0 {
+		d = data[0]
+	}
+
+	Log.Fatal("Message: "+message+" - Additional Data:",
+		zap.Any("data", d),
+		zap.Stack("trace"),
+	)
 }
